@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>
+            .set{
+                width:200px;
+                height: auto;
+            }
+        </style>
+
+        <script>
+            let count = 0;
+            function img_roll(){
+                count +=1;
+                if (count == 3){
+                    count = 0
+                    document.getElementById("rotates").src ='zero.jpg';
+                } else if (count == 2){
+                    document.getElementById("rotates").src ='two.jpg';
+                } else if (count == 1) {
+                    document.getElementById("rotates").src ='one.jpg';
+                } 
+            }
+        </script>
+    </head>
+<body>
+
+<h2>What Can JavaScript Do?</h2>
+
+<p id="demo">JavaScript can change HTML content.</p>
+
+<button type="button" onclick='document.getElementById("demo").innerHTML = "Hello JavaScript!"'>
+    Click Me!</button>
+
+<button type="button" onclick="img_roll()">img roll?</button>
+
+<img id = "rotates" src = "zero.jpg" alt = "rotates" class = "set" onclick = "img_roll()"/>
+</body>
+</html>

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>3D cubes with turtle</title>
+    <link rel="stylesheet" href="../style.css?v=1" type="text/css"/>
+    <!-- tells phones to not fake being a desktop-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+<div class="nav">
+    <a class="active" href="../index.html">home</a>
+    <a href="../sit.html">software and IT
+    </a>
+    <a href="../art.html">art and other
+    </a>
+    <a href="../contact.html" class="right">contact</a>
+</div>
+
+<div class="inpost-content">
+    <h2>Drawing 3D Cubes with Turtle</h2>
+    <p>When learning Python, I quickly gravitated to Turtle, a library that allows you to draw on the screen with a pointer that moves around the screen. </p>
+    <p>I wondered how hard it would be to draw 3D objects with it, and figured it would just require creating some functions to perform all the trigonometry. And hey presto, you have converted a bunch of 3D points to a 2D plane and displayed them.</p>
+    <p>The undertaking of creating a perspective projection seemed a bit too much, but a simpler Parallel Projection was doable. The plan was simple: I could do the rotations in 3D space and then flatten them along an axis.  </p>
+    <img src="pics/cube1.png" alt="a single wire frame of a cube" class="inpost-image">
+    <p>And so you get a 3d cube, this explination skims over a lot of trial and error, and an attempt to skim over the detail with a different approach.</p>
+    <p>The logicall progression from here is lots of cubes, and why not put them in a spiral. </p>
+    <img src ="pics/spiral1.png" alt="a spiral made of cube wire frames" class="inpost-image-full">
+    <p>A more logicall progression from here is actually a more generalised version that can work with different shapes. Which I have made a start at, it works (seen bellow is the tetrahedron), adding more shapes or loading from a generally used format for geometry could be an avenue to take the project.</p>
+    <img src="pics/tetra1.png" alt="a tetrahedron wireframe" class="inpost-image">
+    <h2>Reflection:</h2>
+    <p>Overall this project works, and does something kind of fun! It is mostly readable and designed in a pretty reasonable way (maybe a more OO design could fit better).</p>
+    <p>A reoccuring theme throughout this early work is how these small projects work as unguided sprints, which definetly worked as a learning tool, but a consistent focussed effort to a larger project may yeild a more fullfilling result.</p>
+    <a href="http://github.com/jv-twiddy/rotating-cubes-with-turtle-in-python"><p>repo here</p></a>
+</div>
+
+</body>
+</html>

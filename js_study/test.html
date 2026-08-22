@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Milliseconds Timer</title>
+</head>
+<body>
+    <div id="milliseconds">0</div>
+
+    <script>
+        let startTime;
+
+        function startTimer() {
+            startTime = Date.now();
+            setInterval(updateTimer, 1); // Update every millisecond
+        }
+
+        function updateTimer() {
+            const currentTime = Date.now();
+            const milliseconds = currentTime - startTime;
+            document.getElementById("milliseconds").textContent = milliseconds; // Display milliseconds in the div
+        }
+
+        startTimer();
+    </script>
+</body>
+</html>

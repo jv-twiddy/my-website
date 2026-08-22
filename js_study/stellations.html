@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Dynamic 2D Stellation Generator</title>
+  <style>
+    body {
+      margin: 0;
+      display: flex;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #12141a;
+      color: #e0e0e0;
+      height: 100vh;
+    }
+
+    #sidebar {
+      width: 320px;
+      padding: 24px;
+      background: #1a1d24;
+      box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 0.85rem;
+      color: #9aa0a6;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: #6366f1;
+    }
+
+    #viewport {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    canvas {
+      background: #0d0f12;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+  </style>
+</head>
+
+<body>
+  <div id="viewport">
+    <canvas id="canvas" width="1200" height="600"></canvas>
+  </div>
+
+<script>
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+
+  //co ordinate system to track the users position
+  let screen_cords = {x:0.0, y:0.0};
+  let zoom = 1;
+  const stansize = 24;
+
+  // functions 
+  // get points
+  function get_points(n){
+    const pts = [];
+    for (let i=0; i<n; i++){
+      const angle = (i * 2 * Math.PI) / n - Math.PI / 2;
+      pts.push({
+        x:  Math.cos(angle),
+        y:  Math.sin(angle)
+      });
+    }
+    return pts;
+  }
+
+
+  function draw_sub_shape(pts, n, s, start){
+    // draw a line between the points, step over for the stellation
+    // adjusting for position for the screen and zoom 
+    ctx.beginPath();
+    // term 1- scales the shape, term 2- moves it to position for normal positioning, term 3- adjusts for the screens location 
+    ctx.moveTo(
+      (pts[start].x)*zoom*stansize +(50*(n-2)*zoom) -(screen_cords.x),
+      (pts[start].y)*zoom*stansize +(50*(s+1)*zoom) -(screen_cords.y)
+    );
+    for (let i=1; i<n; i++){
+      const i_ = (i*(1+s) +start) %n;
+      ctx.lineTo( // stepping based on the stellation. 
+        (pts[i_].x)*zoom*stansize +(50*(n-2)*zoom) -(screen_cords.x),
+        (pts[i_].y)*zoom*stansize +(50*(s+1)*zoom) -(screen_cords.y)
+      ); 
+    }
+
+    ctx.closePath();
+    ctx.strokeStyle = '#818cf8';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    return;
+  }
+
+  // draw obj 
+  function draw_shape(n, s){
+    const pts = get_points(n);
+    // may have to do multiple paths
+    if (n%(s+1) === 0){
+      for(let i=0; i<(s+1); i++){
+        draw_sub_shape(pts, n,s,i);
+      }
+    }
+    else{
+      draw_sub_shape(pts, n,s,0);
+    }
+    return; 
+  }
+  
+
+  // render screen
+  function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // select shapes to draw 
+
+
+
+    let f_row = Math.floor(screen_cords.y/(48*zoom));
+    let l_row = Math.floor(screen_cords.y/(48*zoom))  +12;
+    let f_col = Math.floor(screen_cords.x/(48*zoom))  +3;
+    let l_col = Math.floor(screen_cords.x/(48*zoom))  +32;
+
+    if (f_row<0){
+      f_row = 0;
+    }
+    if (l_row<4){
+      l_row = 4;
+    }
+    if (f_col<3){
+      f_col = 3;
+    }
+    if (l_col <13){
+      l_col =13;
+    }
+
+    // find the relative area of the screen 
+    for(let i=f_col; i<l_col; i++){
+      for (let j=f_row; j<l_row;j++){
+        if (((j+1)<(i/2))){
+          draw_shape(i,j);
+        }
+      }
+    }
+  }
+
+  // add event listener 
+  canvas.addEventListener('wheel', (e) => {
+    // Prevent the default browser behavior (page scrolling)
+    e.preventDefault();
+
+    // e.deltaY > 0 means scrolling down / away
+    // e.deltaY < 0 means scrolling up / towards
+    if (e.deltaY < 0) {
+      //console.log('Zooming In / Scrolling Up');
+      zoom+=0.1;
+    } else {
+      //console.log('Zooming Out / Scrolling Down');
+      zoom-=0.1;
+    }
+    render();
+  }, { passive: false });
+
+  let isDragging = false;
+  let startX = 0;
+  let startY = 0;
+  // 1. Start drag on mousedown inside the canvas
+  canvas.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    // Record initial mouse position relative to current screen offset
+    startX = e.clientX + screen_cords.x;
+    startY = e.clientY + screen_cords.y;
+    canvas.style.cursor = 'grabbing';
+  });
+
+  // 2. Update coordinates on mousemove (attached to window to prevent sticking)
+  window.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+
+    // Calculate new screen offset
+    screen_cords.x = startX - e.clientX;
+    screen_cords.y = startY - e.clientY;
+
+    render();
+  });
+
+  // 3. Stop dragging on mouseup anywhere on the screen
+  window.addEventListener('mouseup', () => {
+    if (isDragging) {
+      isDragging = false;
+      canvas.style.cursor = 'default';
+    }
+  });
+
+  render();
+</script>
+</body>
+
+</html>

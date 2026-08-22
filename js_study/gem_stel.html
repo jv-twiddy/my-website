@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dynamic 2D Stellation Generator</title>
+  <style>
+    body {
+      margin: 0;
+      display: flex;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #12141a;
+      color: #e0e0e0;
+      height: 100vh;
+    }
+    #sidebar {
+      width: 320px;
+      padding: 24px;
+      background: #1a1d24;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    label {
+      font-size: 0.85rem;
+      color: #9aa0a6;
+      display: flex;
+      justify-content: space-between;
+    }
+    input[type="range"] {
+      width: 100%;
+      accent-color: #6366f1;
+    }
+    #viewport {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    canvas {
+      background: #0d0f12;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+  </style>
+</head>
+<body>
+
+<div id="sidebar">
+  <h2>2D Stellation Lab</h2>
+
+  <div class="control-group">
+    <label>Base Vertices (n): <span id="val-n">5</span></label>
+    <input id="inp-n" type="range" min="3" max="16" value="5" step="1">
+  </div>
+
+  <div class="control-group">
+    <label>Stellation Step (k): <span id="val-k">2</span></label>
+    <input id="inp-k" type="range" min="1" max="2" value="2" step="1">
+  </div>
+
+  <div class="control-group">
+    <label>Point Height / Scale: <span id="val-scale">1.0</span></label>
+    <input id="inp-scale" type="range" min="0.2" max="2.5" value="1.0" step="0.05">
+  </div>
+
+  <div class="control-group">
+    <label>Recursive Repeats (Depth): <span id="val-depth">1</span></label>
+    <input id="inp-depth" type="range" min="1" max="4" value="1" step="1">
+  </div>
+
+  <div class="control-group">
+    <label>
+      <span>Show Extended Plane Lines</span>
+      <input id="inp-lines" type="checkbox">
+    </label>
+  </div>
+</div>
+
+<div id="viewport">
+  <canvas id="canvas" width="600" height="600"></canvas>
+</div>
+
+<script>
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+
+  const inpN = document.getElementById('inp-n');
+  const inpK = document.getElementById('inp-k');
+  const inpScale = document.getElementById('inp-scale');
+  const inpDepth = document.getElementById('inp-depth');
+  const inpLines = document.getElementById('inp-lines');
+
+  function updateInputs() {
+    const n = parseInt(inpN.value);
+    const maxK = Math.floor((n - 1) / 2);
+    
+    inpK.max = Math.max(1, maxK);
+    if (parseInt(inpK.value) > maxK) inpK.value = Math.max(1, maxK);
+
+    document.getElementById('val-n').innerText = n;
+    document.getElementById('val-k').innerText = inpK.value;
+    document.getElementById('val-scale').innerText = inpScale.value;
+    document.getElementById('val-depth').innerText = inpDepth.value;
+  }
+
+  function getBaseVertices(n, radius, cx, cy) {
+    const pts = [];
+    for (let i = 0; i < n; i++) {
+      const angle = (i * 2 * Math.PI) / n - Math.PI / 2;
+      pts.push({
+        x: cx + radius * Math.cos(angle),
+        y: cy + radius * Math.sin(angle)
+      });
+    }
+    return pts;
+  }
+
+  // Find 2D line intersection between (p1, p2) and (p3, p4)
+  function lineIntersection(p1, p2, p3, p4) {
+    const denom = (p1.x - p2.x) * (p3.y - p4.y) - (p1.y - p2.y) * (p3.x - p4.x);
+    if (Math.abs(denom) < 1e-6) return null;
+
+    const t = ((p1.x - p3.x) * (p3.y - p4.y) - (p1.y - p3.y) * (p3.x - p4.x)) / denom;
+    return {
+      x: p1.x + t * (p2.x - p1.x),
+      y: p1.y + t * (p2.y - p1.y)
+    };
+  }
+
+  function drawStarPolygon(cx, cy, radius, n, k, depth, heightScale, showLines) {
+    const basePts = getBaseVertices(n, radius, cx, cy);
+
+    if (k === 1) {
+      // Regular convex polygon
+      ctx.beginPath();
+      basePts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(99, 102, 241, 0.2)';
+      ctx.fill();
+      ctx.strokeStyle = '#818cf8';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      return;
+    }
+
+    // Compute stellation tip vertices via line intersections
+    const tips = [];
+    const innerPts = [];
+
+    for (let i = 0; i < n; i++) {
+      const p1 = basePts[i];
+      const p2 = basePts[(i + k) % n];
+      const p3 = basePts[(i + 1) % n];
+      const p4 = basePts[(i + 1 - k + n) % n];
+
+      let tip = lineIntersection(p1, p2, p3, p4);
+
+      if (tip) {
+        // Adjust tip distance by user scale factor
+        const angle = Math.atan2(tip.y - cy, tip.x - cx);
+        const dist = Math.hypot(tip.x - cx, tip.y - cy) * heightScale;
+        tip = { x: cx + Math.cos(angle) * dist, y: cy + Math.sin(angle) * dist };
+      } else {
+        tip = p1;
+      }
+      tips.push(tip);
+      innerPts.push(basePts[(i + 1) % n]);
+    }
+
+    // Interleave tips and base vertices to trace the stellation boundary
+    const starPath = [];
+    for (let i = 0; i < n; i++) {
+      starPath.push(tips[i]);
+      starPath.push(innerPts[i]);
+    }
+
+    // Render primary stellation
+    ctx.beginPath();
+    starPath.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(99, 102, 241, 0.25)';
+    ctx.fill();
+    ctx.strokeStyle = '#6366f1';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Render full extended plane lines if enabled
+    if (showLines) {
+      ctx.strokeStyle = 'rgba(244, 63, 94, 0.4)';
+      ctx.lineWidth = 3;
+      for (let i = 0; i < n; i++) {
+        const pA = basePts[i];
+        const pB = basePts[(i + k) % n];
+        const dx = pB.x - pA.x;
+        const dy = pB.y - pA.y;
+        ctx.beginPath();
+        ctx.moveTo(pA.x - dx * 2, pA.y - dy * 2);
+        ctx.lineTo(pB.x + dx * 2, pB.y + dy * 2);
+        ctx.stroke();
+      }
+    }
+
+    // Recursive sub-stellations on the star points
+    if (depth > 1) {
+      tips.forEach((pt) => {
+        const subRadius = (radius / 2.5) / depth;
+        drawRecursiveBranch(pt.x, pt.y, subRadius, n, k, depth - 1, heightScale);
+      });
+    }
+  }
+
+  function drawRecursiveBranch(cx, cy, radius, n, k, depth, heightScale) {
+    if (radius < 4) return;
+    const basePts = getBaseVertices(n, radius, cx, cy);
+
+    ctx.beginPath();
+    for (let i = 0; i < n; i++) {
+      const idx = (i * k) % n;
+      const p = basePts[idx];
+      i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = `hsl(${depth * 60 + 180}, 80%, 65%)`;
+    ctx.fillStyle = `hsla(${depth * 60 + 180}, 80%, 65%, 0.2)`;
+    ctx.fill();
+    ctx.stroke();
+
+    if (depth > 1) {
+      basePts.forEach((pt) => {
+        drawRecursiveBranch(pt.x, pt.y, radius / 2.2, n, k, depth - 1, heightScale);
+      });
+    }
+  }
+
+  function render() {
+    updateInputs();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const n = parseInt(inpN.value);
+    const k = parseInt(inpK.value);
+    const scale = parseFloat(inpScale.value);
+    const depth = parseInt(inpDepth.value);
+    const showLines = inpLines.checked;
+
+    drawStarPolygon(canvas.width / 2, canvas.height / 2, 140, n, k, depth, scale, showLines);
+  }
+
+  [inpN, inpK, inpScale, inpDepth, inpLines].forEach(el => el.addEventListener('input', render));
+  render();
+</script>
+
+</body>
+</html>
