@@ -87,21 +87,40 @@
   }
 
 
-  function draw_sub_shape(pts, n, s, start){
+  function draw_shape(n, s){
+    const pts = get_points(n);
+    let done_pts = [0];
+    let jump = 0;
     // draw a line between the points, step over for the stellation
     // adjusting for position for the screen and zoom 
     ctx.beginPath();
     // term 1- scales the shape, term 2- moves it to position for normal positioning, term 3- adjusts for the screens location 
     ctx.moveTo(
-      (pts[start].x)*zoom*stansize +(50*(n-2)*zoom) -(screen_cords.x),
-      (pts[start].y)*zoom*stansize +(50*(s+1)*zoom) -(screen_cords.y)
+      (pts[0].x)*zoom*stansize +(50*(n-2)*zoom) -(screen_cords.x),
+      (pts[0].y)*zoom*stansize +(50*(s+1)*zoom) -(screen_cords.y)
     );
     for (let i=1; i<n; i++){
-      const i_ = (i*(1+s) +start) %n;
-      ctx.lineTo( // stepping based on the stellation. 
-        (pts[i_].x)*zoom*stansize +(50*(n-2)*zoom) -(screen_cords.x),
-        (pts[i_].y)*zoom*stansize +(50*(s+1)*zoom) -(screen_cords.y)
-      ); 
+      let i_ = (i*(1+s) +jump) %n;
+      if (done_pts.includes(i_)){
+        jump++;
+        i_++;
+        ctx.closePath();
+        ctx.strokeStyle = '#818cf8';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(
+          (pts[i_].x)*zoom*stansize +(50*(n-2)*zoom) -(screen_cords.x),
+          (pts[i_].y)*zoom*stansize +(50*(s+1)*zoom) -(screen_cords.y)
+        );
+      }
+      else{
+        ctx.lineTo( // stepping based on the stellation. 
+          (pts[i_].x)*zoom*stansize +(50*(n-2)*zoom) -(screen_cords.x),
+          (pts[i_].y)*zoom*stansize +(50*(s+1)*zoom) -(screen_cords.y)
+        ); 
+      }
+      done_pts.push(i_);
     }
 
     ctx.closePath();
@@ -111,45 +130,44 @@
     return;
   }
 
-  // draw obj 
-  function draw_shape(n, s){
-    const pts = get_points(n);
-    // may have to do multiple paths
-    if (n%(s+1) === 0){
-      for(let i=0; i<(s+1); i++){
-        draw_sub_shape(pts, n,s,i);
-      }
-    }
-    else{
-      draw_sub_shape(pts, n,s,0);
-    }
-    return; 
-  }
+  // // draw obj 
+  // function draw_shape(n, s){
+    
+  //   // may have to do multiple paths
+  //   if (n%(s+1) === 0){
+  //     for(let i=0; i<(s+1); i++){
+  //       draw_sub_shape(pts, n,s,i);
+  //     }
+  //   }
+  //   else{
+  //     draw_sub_shape(pts, n,s,0);
+  //   }
+  //   return; 
+  // }
   
 
   // render screen
   function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const sel = 60;
+    const seb = 48;
     // select shapes to draw 
-
-
-
-    let f_row = Math.floor(screen_cords.y/(48*zoom));
-    let l_row = Math.floor(screen_cords.y/(48*zoom))  +12;
-    let f_col = Math.floor(screen_cords.x/(48*zoom))  +3;
-    let l_col = Math.floor(screen_cords.x/(48*zoom))  +32;
+    let f_row = Math.floor(screen_cords.y/(sel*zoom));
+    let l_row = Math.floor(screen_cords.y/(seb*zoom))  +12;
+    let f_col = Math.floor(screen_cords.x/(sel*zoom))  +3;
+    let l_col = Math.floor(screen_cords.x/(seb*zoom))  +32;
 
     if (f_row<0){
       f_row = 0;
     }
     if (l_row<4){
-      l_row = 4;
+      l_row = 12;
     }
     if (f_col<3){
       f_col = 3;
     }
     if (l_col <13){
-      l_col =13;
+      l_col = 32;
     }
 
     // find the relative area of the screen 
@@ -166,15 +184,25 @@
   canvas.addEventListener('wheel', (e) => {
     // Prevent the default browser behavior (page scrolling)
     e.preventDefault();
-
+    const pre_cords = {...screen_cords};
+    const centre = {x: pre_cords.x + canvas.width/2, y: pre_cords.y + canvas.height/2};
+    let new_centre = {x:0.0, y:0.0};
     // e.deltaY > 0 means scrolling down / away
     // e.deltaY < 0 means scrolling up / towards
     if (e.deltaY < 0) {
       //console.log('Zooming In / Scrolling Up');
-      zoom+=0.1;
+      zoom=zoom*1.1;
+      new_centre.x = centre.x*1.1;
+      new_centre.y = centre.y*1.1;
+      screen_cords.x = new_centre.x - canvas.width/2;
+      screen_cords.y = new_centre.y - canvas.height/2;
     } else {
       //console.log('Zooming Out / Scrolling Down');
-      zoom-=0.1;
+      zoom=zoom/1.1;
+      new_centre.x = centre.x/1.1;
+      new_centre.y = centre.y/1.1;
+      screen_cords.x = new_centre.x - canvas.width/2;
+      screen_cords.y = new_centre.y - canvas.height/2;
     }
     render();
   }, { passive: false });
