@@ -53,10 +53,12 @@
 
 <body>
   <h1> Stellations</h1>
-  <p> this is a map of different stallations of regular polygons.</p>
-  <button id = "colour_button" type="button" onclick="colour_flip()">colours</button> this switches colours on/off for stellations made of repeated previous stellations.
+  <p> This is a map of different stallations of regular polygons. <a href = "../index.html">Home.</a></p>
+  <button id = "colour_button" type="button" onclick="colour_flip()">colours</button> This switches colours on/off for stellations made of repeated previous stellations.
   </br>
-  <button id = "pop_up_button" type="button" onclick="popup_flip()">pop ups</button> this switches popups for shape info on/off. 
+  <button id = "pop_up_button" type="button" onclick="popup_flip()">pop ups</button> This switches popups for shape info on/off. 
+  </br>
+  <button id = "white button" type="button" onclick="white_flip()">white</button> This makes the lines all white.
   <!-- <button> other</button> -->
   <div id="viewport">
     <canvas id="canvas" width="1200" height="600"></canvas>
@@ -80,10 +82,11 @@
 
   //co ordinate system to track the users position
   let screen_cords = {x:0.0, y:0.0};
-  let zoom = 1;
+  let zoom = 2;
   const stansize = 24;
   let colour_change = true;
   let have_pop_up = true;
+  let all_white = false;
 
   // functions 
   // get points
@@ -180,13 +183,15 @@
     );
     for (let i=1; i<n; i++){
       let i_ = (i*(1+s) +jump) % n;
-      if (done_pts.includes(i_)){
-        jump++;
+      if (done_pts.includes(i_)){ // check if we have been here before 
+        jump++;                   // if we have we want to jump to the next point and start again
         i_++;
         ctx.closePath();
         if(colour_change){
           ctx.strokeStyle = find_oc(i, n, jump);
-        } else{
+        } else if (all_white){
+          ctx.strokeStyle = '#ffffff';
+        } else {
           ctx.strokeStyle = '#818cf8';
         }
         ctx.lineWidth = 2;
@@ -207,7 +212,11 @@
     }
 
     ctx.closePath();
-    ctx.strokeStyle = '#818cf8';
+    if (all_white){
+      ctx.strokeStyle = '#ffffff';
+    } else {
+      ctx.strokeStyle = '#818cf8';
+    }
     ctx.lineWidth = 2;
     ctx.stroke();
     return;
@@ -263,6 +272,16 @@
     } else {
       have_pop_up = true;
     }
+    return;
+  }
+
+  function white_flip(){
+    if(all_white){
+      all_white = false;
+    } else {
+      all_white = true;
+    }
+    render();
     return;
   }
 
