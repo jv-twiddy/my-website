@@ -53,11 +53,25 @@
 
 <body>
   <h1> Stellations</h1>
-  <p> this is a map of different stallations of regular 2d polygons.</p>
-  <button id = "colour_button" type="button" onclick="colour_flip()">colours</button>
+  <p> this is a map of different stallations of regular polygons.</p>
+  <button id = "colour_button" type="button" onclick="colour_flip()">colours</button> this switches colours on/off for stellations made of repeated previous stellations.
+  </br>
+  <button id = "pop_up_button" type="button" onclick="popup_flip()">pop ups</button> this switches popups for shape info on/off. 
   <!-- <button> other</button> -->
   <div id="viewport">
     <canvas id="canvas" width="1200" height="600"></canvas>
+  </div>
+  <div id="popup" style="
+    position: absolute; 
+    display: none; 
+    background: rgba(30, 33, 40, 0.9); 
+    border: 1px solid #6366f1; 
+    padding: 8px 12px; 
+    border-radius: 6px; 
+    pointer-events: none;
+    font-size: 0.9rem;
+  ">
+    <!-- Info will be injected here -->
   </div>
 
 <script>
@@ -69,6 +83,7 @@
   let zoom = 1;
   const stansize = 24;
   let colour_change = true;
+  let have_pop_up = true;
 
   // functions 
   // get points
@@ -198,22 +213,6 @@
     return;
   }
 
-  // // draw obj 
-  // function draw_shape(n, s){
-    
-  //   // may have to do multiple paths
-  //   if (n%(s+1) === 0){
-  //     for(let i=0; i<(s+1); i++){
-  //       draw_sub_shape(pts, n,s,i);
-  //     }
-  //   }
-  //   else{
-  //     draw_sub_shape(pts, n,s,0);
-  //   }
-  //   return; 
-  // }
-  
-
   // render screen
   function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -241,7 +240,7 @@
     // find the relative area of the screen 
     for(let i=f_col; i<l_col; i++){
       for (let j=f_row; j<l_row;j++){
-        if (((j+1)<(i/2))){
+        if ((j+1)<(i/2)){
           draw_shape(i,j);
         }
       }
@@ -251,11 +250,19 @@
   function colour_flip(){
     if (colour_change){
       colour_change = false;
-      colour_button
     } else {
       colour_change = true;
     }
     render();
+    return;
+  }
+
+  function popup_flip(){
+    if (have_pop_up){
+      have_pop_up = false;
+    } else {
+      have_pop_up = true;
+    }
     return;
   }
 
@@ -291,6 +298,9 @@
   let isDragging = false;
   let startX = 0;
   let startY = 0;
+
+  let last_moved = 0; // store the time since last moved, so we dont keep having all the positions crop up 
+  let mouse_pos = {x:0, y:0};
   // 1. Start drag on mousedown inside the canvas
   canvas.addEventListener('mousedown', (e) => {
     isDragging = true;
@@ -302,6 +312,13 @@
 
   // 2. Update coordinates on mousemove (attached to window to prevent sticking)
   window.addEventListener('mousemove', (e) => {
+    // pop up management 
+    last_moved = Date.now();
+    mouse_pos.x = e.clientX;
+    mouse_pos.y = e.clientY;
+    popup.style.display = 'none';
+
+    // dragging 
     if (!isDragging) return;
 
     // Calculate new screen offset
@@ -320,8 +337,43 @@
   });
 
   
-  //event listener to show what stellation your mouse is over 
-  //canvas.addEventListener('')
+  //-e̶v̶e̶n̶t̶ ̶l̶i̶s̶t̶e̶n̶e̶r̶  repeating function to show what stellation your mouse is over 
+  function start_pop_check(){
+    
+    setInterval(pop_check,200) // check every 200 ms 
+  }
+
+  function pop_check() { // grabbed from gemini and  modified 
+
+    if (!have_pop_up){ // early exit if pop up is turned off 
+      return;
+    }
+    // Only trigger if 300ms have passed AND we aren't currently click-dragging
+    if (Date.now() - last_moved > 300 && !isDragging) {
+      
+      // 1. Convert mouse_pos back into world coordinates
+      const worldX = mouse_pos.x + screen_cords.x;
+      const worldY = mouse_pos.y + screen_cords.y;
+      
+      // 2. Reverse your grid math to figure out which n and s you are hovering over!
+      // (Hint: Look at how you calculated f_col and f_row in your render function)
+      const hover_n = Math.floor(worldX / (50 * zoom))+2; 
+      const hover_s = Math.floor(worldY / (50 * zoom)) -3;
+
+      if((hover_n<3)||(hover_s<0)||!((hover_s+1)<(hover_n/2))){ // return if it is not an actual shape 
+        //console.log('n:'+hover_n.toString()+' s:'+hover_s.toString());
+        return;
+      }
+
+      // 3. Update the text and show the popup slightly offset from the cursor
+      popup.innerHTML = `Vertices: ${hover_n} <br> Stellation: ${hover_s}`;
+      popup.style.left = (mouse_pos.x + 15) + 'px';
+      popup.style.top = (mouse_pos.y + 15) + 'px';
+      popup.style.display = 'block';
+    }
+  }
+
+  start_pop_check();
 
   render();
 </script>
