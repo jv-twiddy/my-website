@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Draw Mandala</title>
+  <style>
+     @font-face { font-family: Ftnr; src: url('../ftnr.ttf'); } 
+    @font-face { font-family: Ftnr; font-weight: bold; src: url('../ftnr_bold.ttf');}
+
+    body {
+      margin: 0;
+      font-family: Ftnr, sans-serif;
+      text-align: center;
+      background: #12141a;
+      color: #e0e0e0;
+      height: 100vh;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 0.85rem;
+      color: #9aa0a6;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: #6366f1;
+    }
+
+    #viewport {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    canvas {
+      background: #0d0f12;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      padding: 24px;
+    }
+  </style>
+</head>
+
+<body>
+    <h1> Draw Mandala</h1>
+    <div id="viewport">
+        <canvas id="draw_canvas" width="600" height="600"></canvas>
+        <canvas id="display_canvas" width="600" height="600"></canvas>
+    </div>
+
+    <script>
+
+        // canvases 
+        const draw_canvas = document.getElementById('draw_canvas');
+        const ctx_dr = draw_canvas.getContext('2d');
+
+        const display_canvas = document.getElementById('display_canvas');
+        const ctx_di = display_canvas.getContext('2d');
+
+        // variables 
+        let canvas_size = [600, 600];
+        let current_shape = "circle";
+        let duplications = 4;
+        let colour = "#FFFFFF"
+        let width = 2;
+        let shapes = []; // define shape 
+                         // we should do a list [str, ...]
+                         // use the str to tell the rest 
+                         // can you do obj in js, probably 
+        // shape defintions:  may be adjusted 
+        // circles: ["circles", [x,y], r]
+
+        let temp = []; //holds the shape that is being made  
+
+        // grab input from the draw canvas and add it to shapes 
+        draw_canvas.addEventListener('mousedown', (e)=>{
+          // branch into other functions? 
+          if (current_shape = "circle") new_circle(e); 
+          else console.log("current shape not defined");
+          render_all();
+        });
+
+        function new_circle(e) {
+          // find state
+          if (temp.length == 0){ // new circle 
+            temp.push("circle");
+            const rect = draw_canvas.getBoundingClientRect();
+            const coords = [e.clientX -rect.left,e.clientY -rect.top];
+            temp.push(coords);
+          } else { // second part for circle 
+            const rect = draw_canvas.getBoundingClientRect();
+            const coords = [e.clientX-rect.left, e.clientY-rect.top];
+            const radius = Math.sqrt((coords[0] - temp[1][0])**2 + (coords[1] -temp[1][1])**2);
+
+            temp.push(radius);
+            shapes.push([...temp]); // add to shapes
+            temp = [];  // reset temp for next item
+          }
+        }
+
+        function rotator(cords_off, a){
+          const cords = [ cords_off[0]-canvas_size[0]/2, cords_off[1]-canvas_size[1]/2]; 
+          const newc = [
+            cords[0] * Math.cos(a) - cords[1] * Math.sin(a),
+            cords[0] * Math.sin(a) + cords[1] * Math.cos(a)
+          ];
+          const newc_new = [newc[0]+canvas_size[0]/2, newc[1]+canvas_size[1]/2];
+          return newc_new;
+        }
+
+        // render function for both? display 
+        function render_all( ){
+          // do separate functions, allowing for each to act differently 
+          render_draw();
+          render_display();
+        }
+
+        function render_draw(){
+          // draw single shapes
+          for (let i=0; i<shapes.length; i++){
+            const shape = shapes[i];
+            if (shape[0]=="circle") draw_circle(shape, "draw");
+          }
+        }
+
+        function render_display(){
+          const slice = 2*Math.PI/duplications;
+          for (let i= 0; i<duplications; i++){
+            for (let j=0; j< shapes.length; j++){
+              const shape = shapes[j];
+              // draw shapes 
+              if (shape[0]=="circle") draw_circle(shape, "display", slice*i);
+            }
+          }
+        }
+
+        function draw_circle(shape, screen, rot =0){
+          const a = shape[1];
+          const r = shape[2];
+          if (screen == "draw"){
+            ctx_dr.beginPath();
+            ctx_dr.arc(a[0],a[1],r,0,2*Math.PI);
+            ctx_dr.strokeStyle = colour;
+            ctx_dr.lineWidth = width;
+            ctx_dr.stroke();
+            ctx_dr.closePath();
+          } else {
+            // rotate shapes 
+            const b = rotator(a, rot);
+            // draw
+            ctx_di.beginPath();
+            ctx_di.arc(b[0],b[1],r,0,2*Math.PI);
+            ctx_di.strokeStyle = colour;
+            ctx_di.lineWidth = width;
+            ctx_di.stroke();
+            ctx_di.closePath();
+          }
+        }
+
+    </script>
+</body>

@@ -310,7 +310,7 @@
       screen_cords.y = new_centre.y - canvas.height/2;
     }
     render();
-  }, { passive: false });
+  }, { passive: false }); // passive false means that the typical behavior is deactivated 
 
 
   // drag drop is from gemini, if you cant tell by the comments 
@@ -320,6 +320,10 @@
 
   let last_moved = 0; // store the time since last moved, so we dont keep having all the positions crop up 
   let mouse_pos = {x:0, y:0};
+
+  // phone vars 
+  let isZoming = false;
+  let touch_distance = 0.0;
   // 1. Start drag on mousedown inside the canvas
   canvas.addEventListener('mousedown', (e) => {
     isDragging = true;
@@ -355,8 +359,78 @@
     }
   });
 
+  // adding functionality for phone 
+  canvas.addEventListener("touchstart", (e) =>{
+    // first finger = panning
+    if (e.touches.length == 1){
+      isDragging = true;
+      // im gonna use mouse position 
+      startX = e.touches[0].clientX + screen_cords.x;
+      startY = e.touches[0].clientY + screen_cords.y;
+    }
+
+    // second+ finger = zooming 
+    if (e.touches.length > 1){
+      isDragging = false;
+      isZoming = true;
+      const finger1 = e.touches[0];
+      const finger2 = e.touches[1];
+      touch_distance = Math.sqrt((finger1.clientX - finger2.clientX)**2 + (finger1.clientY - finger2.clientY)**2);
+    }
+  });
+
+  canvas.addEventListener("touchmove", (e) =>{
+    e.preventDefault();
+    // panning 
+    if(isDragging){
+      screen_cords.x = startX - e.touches[0].clientX;
+      screen_cords.y = startY - e.touches[0].clientY;
+    // zooming
+    } else if (isZoming){
+      const finger1 = e.touches[0];
+      const finger2 = e.touches[1];
+      const new_touch_distance = Math.sqrt((finger1.clientX - finger2.clientX)**2 + (finger1.clientY - finger2.clientY)**2);
+      const delta = new_touch_distance - touch_distance;
+      touch_distance = new_touch_distance;
+      const pre_cords = {...screen_cords};
+      const centre = {x: pre_cords.x + canvas.width/2, y: pre_cords.y + canvas.height/2};
+      let new_centre = {x:0.0, y:0.0};
+      // e.deltaY > 0 means scrolling down / away
+      // e.deltaY < 0 means scrolling up / towards
+      if (delta > 0) {
+        //console.log('Zooming In / Scrolling Up');
+        zoom=zoom*1.1;
+        new_centre.x = centre.x*1.1;
+        new_centre.y = centre.y*1.1;
+        screen_cords.x = new_centre.x - canvas.width/2;
+        screen_cords.y = new_centre.y - canvas.height/2;
+      } else {
+        //console.log('Zooming Out / Scrolling Down');
+        zoom=zoom/1.1;
+        new_centre.x = centre.x/1.1;
+        new_centre.y = centre.y/1.1;
+        screen_cords.x = new_centre.x - canvas.width/2;
+        screen_cords.y = new_centre.y - canvas.height/2;
+      }
+    } else {
+      console.log("touch move with no correct state");
+    }
+
+    render();
+  }, {passive:false});
+
+  canvas.addEventListener("touchend", (e) =>{
+    if(e.touches.length == 0){
+      isDragging = false;
+      isZoming = false;
+    } else if(e.touches.length == 1){
+      isZoming = false;
+      isDragging = false;
+    }
+  });
+
   
-  //-e̶v̶e̶n̶t̶ ̶l̶i̶s̶t̶e̶n̶e̶r̶  repeating function to show what stellation your mouse is over 
+  // repeating function to show what stellation your mouse is over 
   function start_pop_check(){
     
     setInterval(pop_check,200) // check every 200 ms 
