@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Dynamic 2D Stellation Generator</title>
+  <style>
+     @font-face { font-family: Ftnr; src: url('../ftnr.ttf'); } 
+    @font-face { font-family: Ftnr; font-weight: bold; src: url('../ftnr_bold.ttf');}
+
+    body {
+      margin: 0;
+      font-family: Ftnr, sans-serif;
+      text-align: center;
+      background: #12141a;
+      color: #e0e0e0;
+      height: 100vh;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 0.85rem;
+      color: #9aa0a6;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: #6366f1;
+    }
+
+    #viewport {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    canvas {
+      background: #000000;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+  </style>
+</head>
+
+<body>
+  <h1> Quick-hull prototype</h1>
+  <div id="viewport">
+    <canvas id="canvas" width="1200" height="600"></canvas>
+  </div>
+    <!-- Info will be injected here -->
+     <div id="frame">0</div>
+  </div>
+
+<script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const points = [[200,300],[400,100],[800,200],[1000,300]];
+    let frames = [];
+    let sub_frames = [];
+    let frame_index = 0;
+    let sub_frame_index = 0;
+
+  // have the frames 
+    function get_frames(){
+        return [
+            {
+                step: 0,
+                current_hull: [],
+                new_line:[],
+                fade_line:[],
+                eliminated: [],
+                to_be_elim: []
+            },
+            {
+                step: 1,
+                current_hull: [],
+                new_line:[[200,300],[1000,300]],
+                fade_line:[],
+                eliminated: [],
+                to_be_elim: []
+            },
+            {
+                step: 2,
+                current_hull: [[200,300],[1000,300]],
+                new_line:[[200,300],[400,100],[1000,300]],
+                fade_line:[],
+                eliminated: [],
+                to_be_elim: []
+            },
+            {
+                step: 3,
+                current_hull: [[200,300],[400,100],[1000,300]],
+                new_line:[[400,100],[800,200],[1000,300]],
+                fade_line:[[400,100],[1000,300]],
+                eliminated: [],
+                to_be_elim: []
+            },
+            {
+                step: 4,
+                current_hull: [[200,300],[400,100],[800,200],[1000,300]],
+                new_line:[],
+                fade_line:[],
+                eliminated: [],
+                to_be_elim: []
+            },
+        ];
+    }
+
+    function gen_sub_frames(frames){
+        let sub_frames_local = [];
+        for (let i=0; i<frames.length;i++){
+            sub_frames_local.push(...gen_subframe_set(frames[i]));
+        }
+        return sub_frames_local;
+    }
+
+    function gen_subframe_set(frame){
+        let sub_frames_local = [];
+        let a = [];
+        let b = [];
+        let c = [];
+        let ab_diff = [];
+        let bc_diff = [];
+        let temp = [];
+        let past_frames = 0;
+        // generate 60 frames for the drawing the new lines 
+        if (frame.new_line.length == 3){
+            past_frames = 60;
+            // three points for new line
+            a = frame.new_line[0];
+            b = frame.new_line[1];
+            c = frame.new_line[2];
+            // find lerps for line 
+
+            // first half of line 
+            ab_diff = [a[0]-b[0], a[1]-b[1]];
+            for(let i=0; i<30;i++){
+                temp = [a[0]-ab_diff[0]*(i/30),a[1]-ab_diff[1]*(i/30)]; // use smooth function here for cleaner animation
+                sub_frames_local. push(
+                    {
+                        step: i,
+                        new_line: [ // 3 points to hold the new line being drawn 
+                            [...a],
+                            [...temp],
+                            [...temp]
+                        ],
+                        fade_line_clr: "#FFFFFF",
+                        fade_pts: "#FFFFFF"
+                    }
+                );
+            }
+
+            // second half of line 
+            bc_diff = [b[0]-c[0], b[1]-c[1]];
+            for(let i=0; i<30;i++){
+                temp = [b[0]-bc_diff[0]*(i/30),b[1]-bc_diff[1]*(i/30)];
+                sub_frames_local. push(
+                    {
+                        step: i+30,
+                        new_line: [ // 3 points to hold the new line being drawn 
+                            [...a],
+                            [...b],
+                            [...temp]
+                        ],
+                        fade_line_clr: "#FFFFFF",
+                        fade_pts: "#FFFFFF"
+                    }
+                );
+            }
+            
+        } else if(frame.new_line.length == 2){
+            past_frames = 30;
+            a = frame.new_line[0];
+            b = frame.new_line[1];
+            // whole line
+            ab_diff = [a[0]-b[0], a[1]-b[1]];
+            for(let i=0; i<30;i++){
+                temp = [a[0]-ab_diff[0]*(i/30),a[1]-ab_diff[1]*(i/30)];
+                sub_frames_local. push(
+                    {
+                        step: i,
+                        new_line: [ // 3 points to hold the new line being drawn 
+                            [...a],
+                            [...temp],
+                            [...temp]
+                        ],
+                        fade_line_clr: "#FFFFFF",
+                        fade_pts: "#FFFFFF"
+                    }
+                );
+            }
+
+        } else {
+            // no new line 
+            // no frames i guess 
+        }
+        
+        // generate 60 frames for fading old line SHOULD ALSO INCLUDE FADE POINTS 
+        // line goes from 255 -> 0
+        // points go from 255 -> 109 ish
+        let line_colour = "#FFFFFF";
+        let point_colour = "#FFFFFF";
+        let line_tmp = "";
+        let point_tmp = "";
+        for(let i=0; i<60; i++){
+            line_temp = dec_to_hex(Math.floor((255/60)*(60-i)));
+            line_colour = "#" + line_temp + line_temp + line_temp;
+            point_temp = dec_to_hex(Math.floor(109 + (146/60)*i));
+            point_colour = "#" + point_temp + point_temp + point_temp;
+            if (frame.new_line.length == 3)
+            sub_frames_local.push(
+                {
+                    step: i + past_frames,
+                    new_line: [[...a],[...b],[...c]],
+                    fade_line_clr: line_colour,
+                    fade_pts: point_colour
+                }
+            )
+            else if ( frame.new_line.length == 2)
+            sub_frames_local.push(
+                {
+                    step: i + past_frames,
+                    new_line: [[...a],[...b],[...b]],
+                    fade_line_clr: line_colour,
+                    fade_pts: point_colour
+                }
+            )
+            else // no new line frames 
+            sub_frames_local.push(
+                {
+                    step: i,
+                    new_line: [],
+                    fade_line_clr: line_colour,
+                    fade_pts: point_colour
+                }
+            )
+        }
+        // done 
+
+        return sub_frames_local;
+    }
+
+    function dec_to_hex(i){
+        let str = '';
+        const a = Math.floor(i/16);
+        if (a> 9){
+        str += String.fromCharCode(65 + a-10);
+        } else {
+        str += a.toString();
+        }
+        const b = i%16;
+        if (b>9){
+        str+= String.fromCharCode(65 +b-10);
+        } else {
+        str += b.toString();
+        }
+        return str;
+    }
+
+    function render(){
+        document.getElementById("frame").textContent = sub_frame_index;
+        let current_frame = frames[frame_index];
+        let current_sub_frame = sub_frames[sub_frame_index];
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // draw points 
+        for (let i=0; i< points.length; i++){
+            ctx.beginPath();
+            ctx.arc(points[i][0],points[i][1],1,0,2*Math.PI);
+            ctx.strokeStyle = "#FFFFFF";
+            ctx.lineWidth= 4;
+            ctx.stroke();
+            ctx.closePath();
+        }
+        // draw current hull 
+        const current_hull = current_frame.current_hull;
+        ctx.beginPath();
+        for (let i= 0; i< current_hull.length; i++){
+            if (i==0)
+            ctx.moveTo(current_hull[i][0], current_hull[i][1]);
+            else
+            ctx.lineTo(current_hull[i][0], current_hull[i][1]);
+        }
+        ctx.closePath();
+        ctx.strokeStyle = "#FFFFFF";
+        ctx.lineWidth= 2;
+        ctx.stroke();
+        
+        // animation 
+        // develop new line
+        const new_line = current_sub_frame.new_line;  
+        if (new_line.length == 3){
+            ctx.beginPath();
+            ctx.moveTo(new_line[0][0], new_line[0][1]);
+            for (let i= 1; i< 3; i++){
+                ctx.lineTo(new_line[i][0], new_line[i][1]);
+            }
+            ctx.strokeStyle = "#FFFFFF";
+            ctx.lineWidth= 2;
+            ctx.stroke();
+            ctx.closePath();
+        }
+
+        // fade old line and points 
+        // old line 
+        // states: 
+            // no old line: if fade line is empty 
+            // fade old line: fade line isnt empty 
+        if(current_frame.fade_line.length ==2){
+            // do fade 
+            ctx.beginPath();
+            ctx.moveTo(current_frame.fade_line[0][0], current_frame.fade_line[0][1]);
+            ctx.lineTo(current_frame.fade_line[1][0], current_frame.fade_line[1][1]);
+            ctx.strokeStyle = current_sub_frame.fade_line_clr;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        } else {
+            // no fade
+        }
+
+        // fade points 
+        for (let i=0; i< current_frame.to_be_elim; i++){
+            ctx.beginPath();
+            ctx.arc(current_frame.to_be_elim[i][0],current_frame.to_be_elim[i][1],1,0,2*Math.PI);
+            ctx.strokeStyle = current_sub_frame.fade_pts;
+            ctx.lineWidth= 4;
+            ctx.stroke();
+            ctx.closePath();
+        }
+        // adjust indexes
+        sub_frame_index ++;
+        if(sub_frame_index == 450){
+            sub_frame_index = 0;
+            frame_index = 0;
+        }
+        else if( sub_frames[sub_frame_index].step == 0){
+            frame_index++;
+        }
+    }
+
+    let last_time = 0;
+    let time_accumulator = 0;
+
+    function animate(current_time){
+        const delta = current_time - last_time;
+        last_time = current_time;
+        time_accumulator +=delta;
+        if (time_accumulator>= 33){
+            render();
+            time_accumulator -=33;
+        }
+        requestAnimationFrame(animate);
+    }
+
+    frames = get_frames();
+    sub_frames = gen_sub_frames(frames);
+    render();
+
+    requestAnimationFrame((timestamp) => {
+        last_time = timestamp;
+        animate(timestamp);
+    });
+</script>
+</body>
+
+</html>
